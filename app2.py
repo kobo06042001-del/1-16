@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.font_manager as fm
 import os
 
-# [핵심 수정] 사용자님의 실제 절대 경로를 r을 붙여 정확히 지정합니다.
+# [핵심] 윈도우 절대 경로 설정 (r을 붙여 역슬래시 인식 오류 방지)
 font_path = r"C:\python_prep\1-16\fonts\NanumGothic.ttf"
 
 @st.cache_resource
@@ -23,7 +23,7 @@ font_prop = setup_korean_font(font_path)
 st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
 st.title("📈 주요 국가별 무역 규모 데이터 분석")
 
-# 데이터 생성 및 순위 1번 시작 설정
+# 데이터 생성 및 순위 1번부터 시작 설정
 data = {
     "구분": ["중국", "미국", "베트남", "일본", "인도네시아", "홍콩", "대만"],
     "2017": [2216.2, 1557.0, 1419.9, 688.6, 520.6, 559.7, 491.2],
@@ -33,7 +33,7 @@ data = {
     "2021": [3215.9, 1761.4, 1617.0, 749.2, 647.9, 620.2, 584.7]
 }
 df = pd.DataFrame(data)
-df.index = range(1, len(df) + 1) # 인덱스를 1부터 시작하도록 수정
+df.index = range(1, len(df) + 1) # 인덱스 1부터 시작
 
 st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
 st.dataframe(df, use_container_width=True)
@@ -62,7 +62,7 @@ with col2:
     ax.legend(title="국가명", bbox_to_anchor=(1.05, 1), loc='upper left')
     
     if not font_prop:
-        st.error(f"🚨 폰트 파일을 찾을 수 없습니다: {font_path}")
+        st.error(f"🚨 폰트 파일을 찾을 수 없습니다: {font_path}") # 경로 오류 발생 시 경고
     
     plt.tight_layout()
     st.pyplot(fig)

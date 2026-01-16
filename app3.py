@@ -2,88 +2,94 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import matplotlib.font_manager as fm
-import os
+import platform
 
-# 1. 나눔고딕 폰트 로드 및 설정 (피드백 반영)
-font_path = "NanumGothic.ttf"
-
-@st.cache_resource
-def configure_font(path):
-    if os.path.exists(path):
-        # 폰트 등록
-        fm.fontManager.addfont(path)
-        prop = fm.FontProperties(fname=path)
-        # Matplotlib 전역 설정에 나눔고딕 적용
-        plt.rcParams['font.family'] = prop.get_name()
-        plt.rcParams['axes.unicode_minus'] = False
-        return prop
+# 1. 그래프 한글 및 스타일 설정
+def set_korean_font():
+    system_name = platform.system()
+    if system_name == "Windows":
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+    elif system_name == "Darwin":  # Mac
+        plt.rcParams['font.family'] = 'AppleGothic'
     else:
-        return None
+        plt.rcParams['font.family'] = 'NanumGothic'
+    plt.rcParams['axes.unicode_minus'] = False
+    sns.set_theme(style="whitegrid", font=plt.rcParams['font.family'])
 
-font_prop = configure_font(font_path)
+set_korean_font()
 
-st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
-st.title("📈 주요 국가별 무역 규모 데이터 분석")
+st.set_page_config(page_title="MLB 유격수 종합 분석", layout="wide")
+st.title("⚾ MLB 역대 유격수 주요 기록 종합 분석")
+st.markdown("홈런, 타점, 안타, 도루, 2루타 데이터를 통해 전설적인 유격수들을 비교합니다.")
 
-# 2. 데이터 구성
+# 2. 확장된 데이터 구성 (StatMuse 기반 데이터)
 data = {
-    "구분": ["중국", "미국", "베트남", "일본", "인도네시아", "홍콩", "대만"],
-    "2017": [2216.2, 1557.0, 1419.9, 688.6, 520.6, 559.7, 491.2],
-    "2018": [2417.4, 1676.9, 1524.8, 735.5, 572.6, 613.3, 532.9],
-    "2019": [2386.6, 1655.1, 1459.8, 695.2, 548.9, 596.4, 513.8],
-    "2020": [2510.0, 1432.2, 1356.9, 630.5, 525.0, 505.1, 472.1],
-    "2021": [3215.9, 1761.4, 1617.0, 749.2, 647.9, 620.2, 584.7]
+    "선수명": ["Cal Ripken Jr.", "Alex Rodriguez", "Ernie Banks", "Miguel Tejada", "Francisco Lindor", "Derek Jeter", "Jimmy Rollins", "Hanley Ramirez", "Vern Stephens", "Trevor Story"],
+    "홈런(HR)": [353, 345, 298, 285, 279, 260, 245, 230, 213, 174],
+    "타점(RBI)": [1369, 990, 858, 1185, 856, 1073, 936, 755, 829, 534],
+    "안타(H)": [2631, 1435, 1378, 2035, 1502, 3034, 2195, 1332, 1104, 895],
+    "도루(SB)": [32, 218, 50, 68, 176, 358, 470, 262, 10, 118],
+    "2루타(2B)": [521, 235, 218, 407, 290, 487, 447, 268, 176, 175]
 }
 
 df = pd.DataFrame(data)
 
-# [수정] 이미지에서 0부터 시작하던 순위를 1부터 시작하도록 변경
+# [수정] 순위 1부터 시작하게 설정
 df.index = range(1, len(df) + 1)
 
-# 3. 데이터 요약 표 출력
-st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
+# 3. 데이터 요약 표
+st.subheader("📊 역대 유격수 주요 기록표 (Top 10)")
 st.dataframe(df, use_container_width=True)
-
-# 4. 시각화 데이터 가공
-df_melted = df.melt(id_vars=['구분'], var_name='연도', value_name='규모')
 
 st.divider()
 
-# 5. 시각화 영역
+# 4. 시각화 분석 컨트롤러
 col1, col2 = st.columns([1, 3])
 
 with col1:
-    chart_type = st.radio("그래프 종류를 선택하세요:", ["선 그래프 (추이)", "막대 그래프 (비교)"])
-    selected_countries = st.multiselect("분석할 국가를 선택하세요:", 
-                                        df["구분"].unique(), 
-                                        default=df["구분"].unique())
-
-filtered_df = df_melted[df_melted["구분"].isin(selected_countries)]
+    st.write("### 🛠 그래프 컨트롤러")
+    
+    # 1. 그래프 형태 선택
+    chart_type = st.radio(
+        "그래프 형태를 고르세요:",
+        ["꺾은선 그래프 (추이)", "누적 막대 그래프 (전체 합계)", "개별 막대 그래프 (비교)"]
+    )
+    
+    # 2. 데이터 지표 선택 (개별 막대/꺾은선용)
+    metrics = ["홈런(HR)", "타점(RBI)", "안타(H)", "도루(SB)", "2루타(2B)"]
+    selected_metric = st.selectbox("분석할 지표 선택:", metrics)
+    
+    # 3. 선수 필터링
+    num_players = st.slider("표시할 선수 인원:", 5, 10, 10)
+    chart_data = df.head(num_players)
 
 with col2:
-    if font_prop:
-        fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    if chart_type == "꺾은선 그래프 (추이)":
+        # 꺾은선 그래프: 기록의 고저차를 한눈에 확인
+        sns.lineplot(data=chart_data, x="선수명", y=selected_metric, marker="D", 
+                     markersize=12, color="#1f77b4", linewidth=3, ax=ax)
+        ax.set_title(f"선수별 {selected_metric} 기록 변화", fontsize=18, pad=20)
         
-        if chart_type == "선 그래프 (추이)":
-            sns.lineplot(data=filtered_df, x="연도", y="규모", hue="구분", marker="o", ax=ax)
-            ax.set_title("연도별 무역 규모 변화 추이", fontsize=18, pad=20)
-        else:
-            sns.barplot(data=filtered_df, x="연도", y="규모", hue="구분", ax=ax)
-            ax.set_title("연도별/국가별 무역 규모 비교", fontsize=18, pad=20)
+    elif chart_type == "누적 막대 그래프 (전체 합계)":
+        # 모든 지표를 쌓아서 선수의 '종합적인 생산성' 확인
+        chart_data.plot(kind='bar', x='선수명', stacked=True, ax=ax, colormap='viridis')
+        ax.set_title("전체 지표 누적 비교 (종합 생산성)", fontsize=18, pad=20)
+        ax.legend(title="기록 항목", bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+    elif chart_type == "개별 막대 그래프 (비교)":
+        sns.barplot(data=chart_data, x="선수명", y=selected_metric, palette="coolwarm", ax=ax)
+        ax.set_title(f"선수별 {selected_metric} 단순 비교", fontsize=18, pad=20)
 
-        # 개별 요소에 폰트 재차 확인 적용
-        ax.set_xlabel("연도", fontsize=12)
-        ax.set_ylabel("규모 (100만 달러)", fontsize=12)
-        
-        # 범례 설정
-        legend = ax.legend(title="국가", bbox_to_anchor=(1.05, 1), loc='upper left')
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-    else:
-        # 폰트 파일이 없을 경우 경고 메시지 출력
-        st.error(f"🚨 '{font_path}' 파일을 찾을 수 없습니다. 파일을 파이썬 코드와 같은 폴더에 넣어주세요.")
-        st.info("파일이 준비되기 전까지는 그래프의 한글이 네모칸으로 보일 수 있습니다.")
+    # 공통 레이아웃 보정
+    plt.xticks(rotation=45)
+    plt.ylabel(selected_metric if chart_type != "누적 막대 그래프 (전체 합계)" else "기록 합계")
+    plt.tight_layout()
+    st.pyplot(fig)
 
-st.info("💡 폰트 파일을 직접 로드하여 모든 환경에서 네모칸 현상을 방지하고, 순위는 1번부터 표시됩니다.")
+# 5. 하단 인사이트 레이블
+max_val = df[selected_metric].max()
+top_player = df.loc[df[selected_metric].idxmax(), '선수명']
+
+st.success(f"💡 **{selected_metric}** 부문 최고 기록은 **{top_player}** 선수의 **{max_val}**개 입니다.")

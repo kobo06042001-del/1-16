@@ -20,7 +20,7 @@ set_korean_font()
 st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
 st.title("📈 주요 국가별 무역 규모 데이터 분석")
 
-# 2. 데이터 복원 및 생성 (제공해주신 텍스트 기반)
+# 2. 데이터 복원 및 생성
 data = {
     "구분": ["중국", "미국", "베트남", "일본", "인도네시아", "홍콩", "대만"],
     "2017": [2216.2, 1557.0, 1419.9, 688.6, 520.6, 559.7, 491.2],
@@ -31,6 +31,10 @@ data = {
 }
 
 df = pd.DataFrame(data)
+
+# --- [수정된 부분: 인덱스를 1부터 시작하도록 설정] ---
+df.index = df.index + 1 
+# ----------------------------------------------
 
 # 3. 데이터 확인
 st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
@@ -45,6 +49,7 @@ st.divider()
 col1, col2 = st.columns([1, 3])
 with col1:
     chart_type = st.radio("그래프 종류를 선택하세요:", ["선 그래프 (추이)", "막대 그래프 (비교)"])
+    # 인덱스가 바뀌었어도 '구분' 컬럼 데이터는 동일하므로 unique() 사용 가능
     selected_countries = st.multiselect("분석할 국가를 선택하세요:", df["구분"].unique(), default=df["구분"].unique())
 
 # 필터링
@@ -66,4 +71,4 @@ with col2:
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     st.pyplot(fig)
 
-st.info("💡 2021년에는 전반적으로 모든 국가와의 무역 규모가 크게 상승한 것을 확인할 수 있습니다.")
+st.info("💡 이제 표의 왼쪽 번호(Index)가 0이 아닌 1부터 시작합니다.")

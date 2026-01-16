@@ -3,17 +3,31 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import platform
+import os
+import matplotlib.font_manager as fm
 
-# 1. 그래프 한글 및 스타일 설정
+# 1. [수정] 폰트 로드 방식 변경 (파일 직접 참조)
 def set_korean_font():
-    system_name = platform.system()
-    if system_name == "Windows":
-        plt.rcParams['font.family'] = 'Malgun Gothic'
-    elif system_name == "Darwin":  # Mac
-        plt.rcParams['font.family'] = 'AppleGothic'
-    else:
+    # 현재 파일과 같은 폴더에 있는 NanumGothic.ttf 경로 설정
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(current_dir, "NanumGothic.ttf")
+    
+    if os.path.exists(font_path):
+        # 1. 폰트 엔트리에 추가
+        fe = fm.FontEntry(fname=font_path, name='NanumGothic')
+        fm.fontManager.ttflist.insert(0, fe)
+        # 2. Matplotlib 기본 폰트로 설정
         plt.rcParams['font.family'] = 'NanumGothic'
+    else:
+        # 파일이 없을 경우 시스템 기본 폰트 사용 (에러 방지용)
+        system_name = platform.system()
+        if system_name == "Windows":
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+        elif system_name == "Darwin":
+            plt.rcParams['font.family'] = 'AppleGothic'
+        
     plt.rcParams['axes.unicode_minus'] = False
+    # Seaborn 테마에도 폰트 적용
     sns.set_theme(style="whitegrid", font=plt.rcParams['font.family'])
 
 set_korean_font()
@@ -67,13 +81,11 @@ with col2:
     fig, ax = plt.subplots(figsize=(12, 7))
     
     if chart_type == "꺾은선 그래프 (추이)":
-        # 꺾은선 그래프: 기록의 고저차를 한눈에 확인
         sns.lineplot(data=chart_data, x="선수명", y=selected_metric, marker="D", 
                      markersize=12, color="#1f77b4", linewidth=3, ax=ax)
         ax.set_title(f"선수별 {selected_metric} 기록 변화", fontsize=18, pad=20)
         
     elif chart_type == "누적 막대 그래프 (전체 합계)":
-        # 모든 지표를 쌓아서 선수의 '종합적인 생산성' 확인
         chart_data.plot(kind='bar', x='선수명', stacked=True, ax=ax, colormap='viridis')
         ax.set_title("전체 지표 누적 비교 (종합 생산성)", fontsize=18, pad=20)
         ax.legend(title="기록 항목", bbox_to_anchor=(1.05, 1), loc='upper left')

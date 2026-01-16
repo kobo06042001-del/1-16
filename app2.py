@@ -5,45 +5,20 @@ import seaborn as sns
 import matplotlib.font_manager as fm
 import os
 
-# [핵심] 우선순위: (1) 프로젝트 내부 폰트(상대경로) → (2) 기존 절대경로 → (3) 시스템 폰트 fallback
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# ✅ 1) 프로젝트에 NanumGothic.ttf가 app2.py 옆에 있으면 이게 제일 안정적
-local_font_1 = os.path.join(BASE_DIR, "NanumGothic.ttf")
-
-# ✅ 2) 프로젝트에 fonts 폴더가 있으면 여기에 둘 수도 있음
-local_font_2 = os.path.join(BASE_DIR, "fonts", "NanumGothic.ttf")
-
-# ✅ 3) 네가 쓰던 절대경로(틀 유지)
-abs_font = r"C:\python_prep\1-16\fonts\NanumGothic.ttf"
-
-# 실제 사용할 폰트 경로 선택
-font_path = next((p for p in [local_font_1, local_font_2, abs_font] if os.path.exists(p)), None)
+# [핵심] 윈도우 절대 경로 설정 (r을 붙여 역슬래시 인식 오류 방지)
+font_path = r"C:\python_prep\1-16\fonts\NanumGothic.ttf"
 
 @st.cache_resource
 def setup_korean_font(path):
-    """
-    path가 있으면 해당 ttf를 matplotlib에 등록해서 사용.
-    없으면 시스템 fallback 폰트(맑은 고딕 등)로라도 한글이 안 깨지게 설정.
-    """
-    if path and os.path.exists(path):
+    if os.path.exists(path):
         fm.fontManager.addfont(path)
         prop = fm.FontProperties(fname=path)
+        plt.rcParams['font.family'] = prop.get_name()
+        plt.rcParams['axes.unicode_minus'] = False
+        return prop
+    return None
 
-        # ✅ 여기서 확실히 rcParams에 박아주기
-        plt.rcParams["font.family"] = prop.get_name()
-        plt.rcParams["axes.unicode_minus"] = False
-
-        # seaborn도 결국 matplotlib 기반이라 이걸로 충분
-        return prop, path
-
-    # ✅ 폰트 파일이 없을 때도 한글 안 깨지게 "시스템 폰트 fallback"
-    # (Windows: Malgun Gothic, Mac: AppleGothic)
-    plt.rcParams["font.family"] = ["NanumGothic", "Malgun Gothic", "AppleGothic", "DejaVu Sans"]
-    plt.rcParams["axes.unicode_minus"] = False
-    return None, None
-
-font_prop, used_font_path = setup_korean_font(font_path)
+font_prop = setup_korean_font(font_path)
 
 st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
 st.title("📈 주요 국가별 무역 규모 데이터 분석")
@@ -58,7 +33,7 @@ data = {
     "2021": [3215.9, 1761.4, 1617.0, 749.2, 647.9, 620.2, 584.7]
 }
 df = pd.DataFrame(data)
-df.index = range(1, len(df) + 1)  # 인덱스 1부터 시작
+df.index = range(1, len(df) + 1) # 인덱스 1부터 시작
 
 st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
 st.dataframe(df, use_container_width=True)
@@ -85,12 +60,9 @@ with col2:
     ax.set_xlabel("연도", fontsize=12)
     ax.set_ylabel("규모 (100만 달러)", fontsize=12)
     ax.legend(title="국가명", bbox_to_anchor=(1.05, 1), loc='upper left')
-
-    # ✅ 경고 메시지는 "사용한 폰트 경로" 기준으로 보여주기
-    if not used_font_path:
-        st.warning("⚠️ NanumGothic.ttf를 못 찾아서 시스템 폰트로 표시 중입니다. (한글은 깨지지 않아야 정상)")
-    else:
-        st.caption(f"✅ 적용된 폰트: {used_font_path}")
-
+    
+    if not font_prop:
+        st.error(f"🚨 폰트 파일을 찾을 수 없습니다: {font_path}") # 경로 오류 발생 시 경고
+    
     plt.tight_layout()
     st.pyplot(fig)

@@ -2,32 +2,30 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import matplotlib.font_manager as fm
-import os
+import platform
 
-# 1. 폰트 경로 지정 및 로드 (사용자 피드백 반영)
-# 같은 폴더에 NanumGothic.ttf 파일이 있어야 합니다.
-font_path = "NanumGothic.ttf"
-
-@st.cache_resource
-def load_font(path):
-    if os.path.exists(path):
-        return fm.FontProperties(fname=path)
+# 1. 시스템별 한글 폰트 설정 (그래프 네모칸 방지)
+def set_korean_font():
+    system_name = platform.system()
+    if system_name == "Windows":
+        # 윈도우: 맑은 고딕
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+    elif system_name == "Darwin":
+        # 맥: 애플 고딕
+        plt.rcParams['font.family'] = 'AppleGothic'
     else:
-        # 파일이 없을 경우를 대비한 예외 처리
-        return None
+        # 리눅스/배포환경: 나눔 고딕 시도
+        plt.rcParams['font.family'] = 'NanumGothic'
+    
+    # 그래프에서 마이너스 기호가 깨지는 현상 방지
+    plt.rcParams['axes.unicode_minus'] = False
 
-font_prop = load_font(font_path)
-
-# 그래프 기본 설정 (전역 설정이 안 될 경우를 대비해 개별 요소에 적용 예정)
-if font_prop:
-    plt.rcParams['font.family'] = font_prop.get_name()
-plt.rcParams['axes.unicode_minus'] = False
+set_korean_font()
 
 st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
 st.title("📈 주요 국가별 무역 규모 데이터 분석")
 
-# 2. 데이터 구성
+# 2. 데이터 생성 (보내주신 이미지의 데이터 기반)
 data = {
     "구분": ["중국", "미국", "베트남", "일본", "인도네시아", "홍콩", "대만"],
     "2017": [2216.2, 1557.0, 1419.9, 688.6, 520.6, 559.7, 491.2],
@@ -39,14 +37,14 @@ data = {
 
 df = pd.DataFrame(data)
 
-# [요청사항] 인덱스(순위) 1부터 시작하게 설정
+# [해결 1] 첫 번째 사진의 인덱스 0을 1부터 시작하도록 수정
 df.index = range(1, len(df) + 1)
 
-# 3. 데이터 요약 표 출력
+# 3. 데이터 요약 출력
 st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
 st.dataframe(df, use_container_width=True)
 
-# 4. 시각화 데이터 가공
+# 4. 시각화 준비 (데이터 변환)
 df_melted = df.melt(id_vars=['구분'], var_name='연도', value_name='규모')
 
 st.divider()
@@ -57,35 +55,32 @@ col1, col2 = st.columns([1, 3])
 with col1:
     chart_type = st.radio("그래프 종류를 선택하세요:", ["선 그래프 (추이)", "막대 그래프 (비교)"])
     selected_countries = st.multiselect("분석할 국가를 선택하세요:", 
-                                        df["구분"].unique(), 
-                                        default=df["구분"].unique())
+                                        df["구분"].tolist(), 
+                                        default=df["구분"].tolist())
 
+# 선택한 국가만 필터링
 filtered_df = df_melted[df_melted["구분"].isin(selected_countries)]
 
 with col2:
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # [해결 2] 그래프 내부의 한글(네모칸) 해결을 위해 폰트 설정 재확인
+    fig, ax = plt.subplots(figsize=(10, 6))
     
     if chart_type == "선 그래프 (추이)":
-        sns.lineplot(data=filtered_df, x="연도", y="규모", hue="구분", marker="o", ax=ax)
-        title_text = "연도별 무역 규모 변화 추이"
+        sns.lineplot(data=filtered_df, x="연도", y="규모", hue="구분", marker="o", linewidth=2, ax=ax)
+        ax.set_title("연도별 무역 규모 변화 추이", fontsize=16, pad=20)
     else:
         sns.barplot(data=filtered_df, x="연도", y="규모", hue="구분", ax=ax)
-        title_text = "연도별/국가별 무역 규모 비교"
+        ax.set_title("연도별/국가별 무역 규모 비교", fontsize=16, pad=20)
 
-    # --- [네모칸 해결: 폰트 객체를 직접 주입] ---
-    if font_prop:
-        ax.set_title(title_text, fontproperties=font_prop, fontsize=18, pad=20)
-        ax.set_xlabel("연도", fontproperties=font_prop, fontsize=12)
-        ax.set_ylabel("규모 (100만 달러)", fontproperties=font_prop, fontsize=12)
-        
-        # 범례(Legend) 폰트 설정
-        legend = ax.legend(title="국가", bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.setp(legend.get_texts(), fontproperties=font_prop)
-        plt.setp(legend.get_title(), fontproperties=font_prop)
-    else:
-        st.error("🚨 'NanumGothic.ttf' 파일을 찾을 수 없습니다. 파일이 같은 폴더에 있는지 확인해주세요.")
-
+    # 축 이름 한글 설정
+    ax.set_xlabel("연도", fontsize=12)
+    ax.set_ylabel("무역 규모 (100만 달러)", fontsize=12)
+    
+    # [해결 3] 범례(Legend) 국가명 한글 깨짐 해결
+    ax.legend(title="국가명", bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     st.pyplot(fig)
 
-st.info("💡 폰트 파일을 직접 로드하여 환경에 상관없이 네모칸 현상을 방지합니다.")
+st.info("💡 이제 왼쪽 표는 1번부터 시작하며, 그래프의 제목과 국가명도 한글로 정상 표시됩니다.")

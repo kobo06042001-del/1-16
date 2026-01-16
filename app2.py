@@ -5,9 +5,8 @@ import seaborn as sns
 import matplotlib.font_manager as fm
 import os
 
-# [수정] 폰트 파일이 들어있는 폴더명을 확인하여 경로를 설정하세요.
-# 예: 폴더명이 'fonts'라면 "fonts/NanumGothic.ttf"
-font_path = "fonts/NanumGothic.ttf" 
+# [수정] 윈도우 절대 경로 설정 (r을 붙여서 경로 내 역슬래시를 보호합니다)
+font_path = r"C:\python_prep\1-16\fonts\NanumGothic.ttf"
 
 @st.cache_resource
 def setup_korean_font(path):
@@ -24,6 +23,7 @@ font_prop = setup_korean_font(font_path)
 st.set_page_config(page_title="무역 데이터 시각화", layout="wide")
 st.title("📈 주요 국가별 무역 규모 데이터 분석")
 
+# 데이터 생성 및 인덱스 1부터 시작 설정
 data = {
     "구분": ["중국", "미국", "베트남", "일본", "인도네시아", "홍콩", "대만"],
     "2017": [2216.2, 1557.0, 1419.9, 688.6, 520.6, 559.7, 491.2],
@@ -32,9 +32,8 @@ data = {
     "2020": [2510.0, 1432.2, 1356.9, 630.5, 525.0, 505.1, 472.1],
     "2021": [3215.9, 1761.4, 1617.0, 749.2, 647.9, 620.2, 584.7]
 }
-
 df = pd.DataFrame(data)
-df.index = range(1, len(df) + 1) # 인덱스 1부터 시작
+df.index = range(1, len(df) + 1) #
 
 st.subheader("📊 데이터 요약 (단위: 100만 달러 추정)")
 st.dataframe(df, use_container_width=True)
@@ -42,6 +41,7 @@ st.dataframe(df, use_container_width=True)
 df_melted = df.melt(id_vars=['구분'], var_name='연도', value_name='규모')
 st.divider()
 
+# 시각화 영역
 col1, col2 = st.columns([1, 3])
 with col1:
     chart_type = st.radio("그래프 종류를 선택하세요:", ["선 그래프 (추이)", "막대 그래프 (비교)"])
@@ -63,7 +63,7 @@ with col2:
     ax.legend(title="국가명", bbox_to_anchor=(1.05, 1), loc='upper left')
     
     if not font_prop:
-        st.error(f"🚨 '{font_path}' 파일을 찾을 수 없습니다. 폴더명을 확인해주세요.")
+        st.error(f"🚨 경로에 폰트 파일이 없습니다: {font_path}")
     
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()

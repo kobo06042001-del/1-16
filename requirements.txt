@@ -2,6 +2,4 @@ streamlit
 pandas
 matplotlib
 seaborn
-numpy
-chardet
 # 이후 터미널에서 pip install -r requirements.txt 기입 후 엔터
